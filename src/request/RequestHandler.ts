@@ -24,13 +24,20 @@ export class RequestHandler {
   public static async createRequestObjectStub(
     connectionPolicy: ConnectionPolicy,
     requestOptions: RequestOptions,
-    body?: any
+    body?: any,
+    userSignal?: AbortSignal
   ) {
-    let didTimeout: boolean;
     const controller = new AbortController();
     const signal = controller.signal;
+
+    // Wrap users passed abort events and call our own internal abort()
+    if (userSignal) {
+      userSignal.onabort = () => {
+        controller.abort();
+      };
+    }
+
     const timeout = setTimeout(() => {
-      didTimeout = true;
       controller.abort();
     }, connectionPolicy.requestTimeout);
 
@@ -47,10 +54,12 @@ export class RequestHandler {
       } as any); // TODO Remove any. Upstream issue https://github.com/lquixada/cross-fetch/issues/42
     } catch (error) {
       if (error.name === "AbortError") {
-        if (didTimeout === true) {
-          throw new TimeoutError();
+        // If the user passed signal caused the abort, cancel the timeout and rethrow the error
+        if (userSignal && userSignal.aborted === true) {
+          clearTimeout(timeout);
+          throw error;
         }
-        // TODO handle user requested cancellation here
+        throw new TimeoutError();
       }
       throw error;
     }

@@ -329,7 +329,8 @@ export class ClientContext {
         client: this,
         operationType: OperationType.Replace,
         path,
-        resourceType: type
+        resourceType: type,
+        abortSignal: options.abortSignal
       };
 
       this.applySessionToken(path, reqHeaders);

@@ -3,6 +3,7 @@ import { Agent } from "http";
 import { CosmosClient } from "../..";
 import { endpoint, masterKey } from "../common/_testConfig";
 import { getTestDatabase } from "../common/TestHelpers";
+import AbortController from "abort-controller";
 
 describe("NodeJS CRUD Tests", function() {
   this.timeout(process.env.MOCHA_TIMEOUT || 20000);
@@ -11,13 +12,31 @@ describe("NodeJS CRUD Tests", function() {
     it("nativeApi Client Should throw exception", async function() {
       // making timeout 1 ms to make sure it will throw
       // (create database request takes 10ms-15ms to finish on emulator)
-      const client = new CosmosClient({ endpoint, auth: { masterKey }, connectionPolicy: { requestTimeout: 1 } });
+      const client = new CosmosClient({ endpoint, auth: { masterKey } });
       // create database
       try {
         await getTestDatabase("request timeout", client);
         assert.fail("Must throw when trying to connect to database");
       } catch (err) {
         assert.equal(err.name, "TimeoutError", "client should throw exception");
+      }
+    });
+  });
+
+  describe("Validate user passed AbortController.signal", function() {
+    it.only("should throw exception", async function() {
+      // making timeout 1 ms to make sure it will throw
+      // (create database request takes 10ms-15ms to finish on emulator)
+      const client = new CosmosClient({ endpoint, auth: { masterKey } });
+      // create database
+      try {
+        const controller = new AbortController();
+        const signal = controller.signal;
+        await client.getDatabaseAccount({ abortSignal: signal });
+        controller.abort();
+        assert.fail("Must throw when trying to connect to database");
+      } catch (err) {
+        assert.equal(err.name, "AbortError", "client should throw exception");
       }
     });
   });

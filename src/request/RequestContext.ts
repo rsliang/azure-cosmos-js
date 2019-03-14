@@ -3,6 +3,7 @@ import { OperationType, ResourceType } from "../common";
 import { LocationRouting } from "./LocationRouting";
 
 export interface RequestContext {
+  abortSignal?: AbortSignal;
   path?: string;
   operationType?: OperationType;
   client?: ClientContext;
