@@ -1,9 +1,9 @@
+import AbortController from "abort-controller";
 import assert from "assert";
 import { Agent } from "http";
 import { CosmosClient } from "../..";
 import { endpoint, masterKey } from "../common/_testConfig";
 import { getTestDatabase } from "../common/TestHelpers";
-import AbortController from "abort-controller";
 
 describe("NodeJS CRUD Tests", function() {
   this.timeout(process.env.MOCHA_TIMEOUT || 20000);
@@ -24,7 +24,7 @@ describe("NodeJS CRUD Tests", function() {
   });
 
   describe("Validate user passed AbortController.signal", function() {
-    it.only("should throw exception", async function() {
+    it("should throw exception", async function() {
       // making timeout 1 ms to make sure it will throw
       // (create database request takes 10ms-15ms to finish on emulator)
       const client = new CosmosClient({ endpoint, auth: { masterKey } });
