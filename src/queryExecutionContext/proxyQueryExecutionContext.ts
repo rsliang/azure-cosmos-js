@@ -1,6 +1,6 @@
 import { ClientContext } from "../ClientContext";
 import { StatusCodes, SubStatusCodes } from "../common/statusCodes";
-import { Response } from "../request";
+import { FeedOptions, Response } from "../request";
 import { DefaultQueryExecutionContext, FetchFunctionCallback } from "./defaultQueryExecutionContext";
 import { IExecutionContext } from "./IExecutionContext";
 import { PartitionedQueryExecutionContextInfo } from "./partitionedQueryExecutionContextInfoParser";
@@ -14,7 +14,7 @@ export class ProxyQueryExecutionContext implements IExecutionContext {
   constructor(
     private clientContext: ClientContext,
     private query: SqlQuerySpec | string,
-    private options: any, // TODO: any options
+    private options: FeedOptions,
     private fetchFunctions: FetchFunctionCallback | FetchFunctionCallback[],
     private resourceLink: string | string[]
   ) {

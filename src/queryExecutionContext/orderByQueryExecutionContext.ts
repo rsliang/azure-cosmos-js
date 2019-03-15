@@ -1,4 +1,5 @@
 import { ClientContext } from "../ClientContext";
+import { FeedOptions } from "../request";
 import { DocumentProducer } from "./documentProducer";
 import { IExecutionContext } from "./IExecutionContext";
 import { OrderByDocumentProducerComparator } from "./orderByDocumentProducerComparator";
@@ -26,7 +27,7 @@ export class OrderByQueryExecutionContext extends ParallelQueryExecutionContextB
     clientContext: ClientContext,
     collectionLink: string,
     query: any, // TODO: any query
-    options: any, // TODO: any options
+    options: FeedOptions,
     partitionedQueryExecutionInfo: PartitionedQueryExecutionContextInfo
   ) {
     // Calling on base class constructor

@@ -1,7 +1,7 @@
 import { ClientContext } from "../ClientContext";
 import { Constants } from "../common";
 import { ClientSideMetrics, QueryMetrics } from "../queryMetrics";
-import { Response } from "../request";
+import { FeedOptions, Response } from "../request";
 import { IExecutionContext } from "./index";
 import { SqlQuerySpec } from "./SqlQuerySpec";
 
@@ -23,7 +23,7 @@ export class DefaultQueryExecutionContext implements IExecutionContext {
   private currentIndex: number;
   private currentPartitionIndex: number;
   private fetchFunctions: FetchFunctionCallback[];
-  private options: any; // TODO: any options
+  private options: FeedOptions;
   public continuation: any; // TODO: any continuation
   private state: STATES;
   /**

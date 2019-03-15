@@ -1,5 +1,5 @@
 import { ClientContext } from "../ClientContext";
-import { Response } from "../request";
+import { FeedOptions, Response } from "../request";
 import { CosmosHeaders } from "./CosmosHeaders";
 import {
   AggregateEndpointComponent,
@@ -25,7 +25,7 @@ export class PipelinedQueryExecutionContext implements IExecutionContext {
     private clientContext: ClientContext,
     private collectionLink: string,
     private query: any, // TODO: any query
-    private options: any, // TODO: any options
+    private options: FeedOptions,
     private partitionedQueryExecutionInfo: PartitionedQueryExecutionContextInfo
   ) {
     this.endpoint = null;

@@ -1,4 +1,5 @@
 import { ClientContext } from "../ClientContext";
+import { FeedOptions } from "../request";
 import { PARITIONKEYRANGE } from "../routing/smartRoutingMapProvider";
 import { DocumentProducer } from "./documentProducer";
 import { IExecutionContext } from "./IExecutionContext";
@@ -22,7 +23,7 @@ export class ParallelQueryExecutionContext extends ParallelQueryExecutionContext
     clientContext: ClientContext,
     collectionLink: string,
     query: any,
-    options: any,
+    options: FeedOptions,
     partitionedQueryExecutionInfo: PartitionedQueryExecutionContextInfo
   ) {
     // Calling on base class constructor

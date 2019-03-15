@@ -3,7 +3,7 @@ import PriorityQueue from "priorityqueuejs";
 import semaphore from "semaphore";
 import { ClientContext } from "../ClientContext";
 import { StatusCodes, SubStatusCodes } from "../common/statusCodes";
-import { Response } from "../request";
+import { FeedOptions, Response } from "../request";
 import { QueryRange } from "../routing/QueryRange";
 import { PARITIONKEYRANGE, SmartRoutingMapProvider } from "../routing/smartRoutingMapProvider";
 import { CosmosHeaders } from "./CosmosHeaders";
@@ -53,7 +53,7 @@ export abstract class ParallelQueryExecutionContextBase implements IExecutionCon
     private clientContext: ClientContext,
     private collectionLink: string,
     private query: any, // TODO: any - It's not SQLQuerySpec
-    private options: any,
+    private options: FeedOptions,
     private partitionedQueryExecutionInfo: PartitionedQueryExecutionContextInfo
   ) {
     this.clientContext = clientContext;
