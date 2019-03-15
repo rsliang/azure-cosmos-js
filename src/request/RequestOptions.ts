@@ -53,6 +53,14 @@ export interface RequestOptions {
   skipGetPartitionKeyDefinition?: boolean;
   /** Disable automatic id generation (will cause creates to fail if id isn't on the definition) */
   disableAutomaticIdGeneration?: boolean;
-  /** TODO Document */
+  /**
+   * abortSignal to pass to all underlying network requests created by this method call. See https://developer.mozilla.org/en-US/docs/Web/API/AbortController
+   * @example Cancel a read request
+   * ```typescript
+   * const controller = new AbortController()
+   * const {result: item} = await items.read(id, { abortSignal: controller.signal});
+   * controller.abort()
+   * ```
+   */
   abortSignal?: AbortSignal;
 }

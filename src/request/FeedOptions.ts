@@ -44,6 +44,14 @@ export interface FeedOptions {
   };
   /** Enable returning query metrics in response headers */
   populateQueryMetrics?: boolean;
-  /** TODO Document */
+  /**
+   * abortSignal to pass to all underlying network requests created by this method call. See https://developer.mozilla.org/en-US/docs/Web/API/AbortController
+   * @example Cancel a read request
+   * ```typescript
+   * const controller = new AbortController()
+   * const {result: item} = await items.query('SELECT * from c', { abortSignal: controller.signal});
+   * controller.abort()
+   * ```
+   */
   abortSignal?: AbortSignal;
 }
