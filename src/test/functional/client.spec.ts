@@ -12,7 +12,7 @@ describe("NodeJS CRUD Tests", function() {
     it("nativeApi Client Should throw exception", async function() {
       // making timeout 1 ms to make sure it will throw
       // (create database request takes 10ms-15ms to finish on emulator)
-      const client = new CosmosClient({ endpoint, auth: { masterKey } });
+      const client = new CosmosClient({ endpoint, auth: { masterKey }, connectionPolicy: { requestTimeout: 1 } });
       // create database
       try {
         await getTestDatabase("request timeout", client);
