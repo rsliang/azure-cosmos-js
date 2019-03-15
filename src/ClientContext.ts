@@ -45,7 +45,7 @@ export class ClientContext {
     type: ResourceType,
     id: string,
     initialHeaders: CosmosHeaders,
-    options?: RequestOptions
+    options: RequestOptions = {}
   ): Promise<Response<T & Resource>> {
     try {
       const requestHeaders = await getHeaders(
@@ -174,7 +174,7 @@ export class ClientContext {
     type: ResourceType,
     id: string,
     initialHeaders: CosmosHeaders,
-    options?: RequestOptions
+    options: RequestOptions = {}
   ): Promise<Response<T & Resource>> {
     try {
       const reqHeaders = await getHeaders(
@@ -219,7 +219,7 @@ export class ClientContext {
     type: ResourceType,
     id: string,
     initialHeaders: CosmosHeaders,
-    options?: RequestOptions
+    options: RequestOptions = {}
   ): Promise<Response<T & Resource>>;
 
   // But a few cases, like permissions, there is additional junk added to the response that isn't in system resource props
@@ -229,7 +229,7 @@ export class ClientContext {
     type: ResourceType,
     id: string,
     initialHeaders: CosmosHeaders,
-    options?: RequestOptions
+    options: RequestOptions = {}
   ): Promise<Response<T & U & Resource>>;
   public async create<T, U>(
     body: T,
@@ -237,7 +237,7 @@ export class ClientContext {
     type: ResourceType,
     id: string,
     initialHeaders: CosmosHeaders,
-    options?: RequestOptions
+    options: RequestOptions = {}
   ): Promise<Response<T & U & Resource>> {
     try {
       const requestHeaders = await getHeaders(
@@ -315,7 +315,7 @@ export class ClientContext {
     type: ResourceType,
     id: string,
     initialHeaders: CosmosHeaders,
-    options?: RequestOptions
+    options: RequestOptions = {}
   ): Promise<Response<T & Resource>> {
     try {
       const reqHeaders = await getHeaders(
@@ -356,7 +356,7 @@ export class ClientContext {
     type: ResourceType,
     id: string,
     initialHeaders: CosmosHeaders,
-    options?: RequestOptions
+    options: RequestOptions = {}
   ): Promise<Response<T & Resource>>;
   public async upsert<T, U>(
     body: T,
@@ -364,7 +364,7 @@ export class ClientContext {
     type: ResourceType,
     id: string,
     initialHeaders: CosmosHeaders,
-    options?: RequestOptions
+    options: RequestOptions = {}
   ): Promise<Response<T & U & Resource>>;
   public async upsert<T>(
     body: T,
@@ -372,7 +372,7 @@ export class ClientContext {
     type: ResourceType,
     id: string,
     initialHeaders: CosmosHeaders,
-    options?: RequestOptions
+    options: RequestOptions = {}
   ): Promise<Response<T & Resource>> {
     try {
       const requestHeaders = await getHeaders(
@@ -411,7 +411,7 @@ export class ClientContext {
   public async execute<T>(
     sprocLink: string,
     params?: any[], // TODO: any
-    options?: RequestOptions
+    options: RequestOptions = {}
   ): Promise<Response<T>> {
     const initialHeaders = { ...this.cosmosClientOptions.defaultHeaders, ...(options && options.initialHeaders) };
 
