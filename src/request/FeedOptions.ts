@@ -44,4 +44,6 @@ export interface FeedOptions {
   };
   /** Enable returning query metrics in response headers */
   populateQueryMetrics?: boolean;
+  /** TODO Document */
+  abortSignal?: AbortSignal;
 }

@@ -5,9 +5,10 @@ import { sleep } from "../common/helper";
 import { StatusCodes, SubStatusCodes } from "../common/statusCodes";
 import { ConnectionPolicy } from "../documents/ConnectionPolicy";
 import { GlobalEndpointManager } from "../globalEndpointManager";
-import { Response } from "../request";
 import { LocationRouting } from "../request/LocationRouting";
+import { request } from "../request/request";
 import { RequestContext } from "../request/RequestContext";
+import { Response } from "../request/Response";
 import { DefaultRetryPolicy } from "./defaultRetryPolicy";
 import { EndpointDiscoveryRetryPolicy } from "./endpointDiscoveryRetryPolicy";
 import { ResourceThrottleRetryPolicy } from "./resourceThrottleRetryPolicy";
@@ -15,22 +16,15 @@ import { RetryContext } from "./RetryContext";
 import { RetryPolicy } from "./RetryPolicy";
 import { SessionRetryPolicy } from "./sessionRetryPolicy";
 
-/** @hidden */
-export type CreateRequestObjectStubFunction = (
-  connectionPolicy: ConnectionPolicy,
-  requestOptions: RequestOptions,
-  body: Buffer
-) => Promise<Response<any>>; // TODO: any response
-
 interface ExecuteArgs {
   globalEndpointManager: GlobalEndpointManager;
   body: Buffer;
-  createRequestObjectFunc: CreateRequestObjectStubFunction;
   connectionPolicy: ConnectionPolicy;
   requestOptions: RequestOptions;
   request: RequestContext;
   retryContext?: RetryContext;
   retryPolicies?: RetryPolicies;
+  abortSignal?: AbortSignal;
 }
 
 interface RetryPolicies {
@@ -42,13 +36,13 @@ interface RetryPolicies {
 
 export async function execute({
   body,
-  createRequestObjectFunc,
   connectionPolicy,
   requestOptions,
   globalEndpointManager,
-  request,
+  request: requestContext,
   retryContext,
-  retryPolicies
+  retryPolicies,
+  abortSignal
 }: ExecuteArgs): Promise<Response<any>> {
   // TODO: any response
 
@@ -57,7 +51,10 @@ export async function execute({
   }
   if (!retryPolicies) {
     retryPolicies = {
-      endpointDiscoveryRetryPolicy: new EndpointDiscoveryRetryPolicy(globalEndpointManager, request.operationType),
+      endpointDiscoveryRetryPolicy: new EndpointDiscoveryRetryPolicy(
+        globalEndpointManager,
+        requestContext.operationType
+      ),
       resourceThrottleRetryPolicy: new ResourceThrottleRetryPolicy(
         connectionPolicy.retryOptions.maxRetryAttemptCount,
         connectionPolicy.retryOptions.fixedRetryIntervalInMilliseconds,
@@ -65,30 +62,30 @@ export async function execute({
       ),
       sessionReadRetryPolicy: new SessionRetryPolicy(
         globalEndpointManager,
-        request.resourceType,
-        request.operationType,
+        requestContext.resourceType,
+        requestContext.operationType,
         connectionPolicy
       ),
-      defaultRetryPolicy: new DefaultRetryPolicy(request.operationType)
+      defaultRetryPolicy: new DefaultRetryPolicy(requestContext.operationType)
     };
   }
-  const httpsRequest = createRequestObjectFunc(connectionPolicy, requestOptions, body);
-  if (!request.locationRouting) {
-    request.locationRouting = new LocationRouting();
+  const httpsRequest = request(connectionPolicy, requestOptions, body, abortSignal);
+  if (!requestContext.locationRouting) {
+    requestContext.locationRouting = new LocationRouting();
   }
-  request.locationRouting.clearRouteToLocation();
+  requestContext.locationRouting.clearRouteToLocation();
   if (retryContext) {
-    request.locationRouting.routeToLocation(
+    requestContext.locationRouting.routeToLocation(
       retryContext.retryCount || 0,
       !retryContext.retryRequestOnPreferredLocations
     );
     if (retryContext.clearSessionTokenNotAvailable) {
-      request.client.clearSessionToken(request.path);
+      requestContext.client.clearSessionToken(requestContext.path);
     }
   }
-  const locationEndpoint = await globalEndpointManager.resolveServiceEndpoint(request);
+  const locationEndpoint = await globalEndpointManager.resolveServiceEndpoint(requestContext);
   requestOptions = modifyRequestOptions(requestOptions, url.parse(locationEndpoint));
-  request.locationRouting.routeToLocation(locationEndpoint);
+  requestContext.locationRouting.routeToLocation(locationEndpoint);
   try {
     const { result, headers } = await (httpsRequest as Promise<Response<any>>);
     headers[Constants.ThrottleRetryCount] = retryPolicies.resourceThrottleRetryPolicy.currentRetryAttemptCount;
@@ -116,16 +113,15 @@ export async function execute({
       err.headers = { ...err.headers, ...headers };
       throw err;
     } else {
-      request.retryCount++;
+      requestContext.retryCount++;
       const newUrl = (results as any)[1]; // TODO: any hack
       await sleep(retryPolicy.retryAfterInMilliseconds);
       return execute({
         body,
-        createRequestObjectFunc,
         connectionPolicy,
         requestOptions,
         globalEndpointManager,
-        request,
+        request: requestContext,
         retryContext,
         retryPolicies
       });

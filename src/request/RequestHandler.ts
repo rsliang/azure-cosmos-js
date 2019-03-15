@@ -1,19 +1,14 @@
-import { AbortController } from "abort-controller";
-import fetch from "cross-fetch";
 import { Agent, OutgoingHttpHeaders } from "http";
 import { RequestOptions } from "https"; // TYPES ONLY
 import { parse } from "url";
-import { Constants, HTTPMethod } from "../common/constants";
+import { HTTPMethod } from "../common/constants";
 import { ConnectionPolicy } from "../documents";
 import { GlobalEndpointManager } from "../globalEndpointManager";
 import { CosmosHeaders } from "../queryExecutionContext/CosmosHeaders";
 import * as RetryUtility from "../retry/retryUtility";
-import { ErrorResponse } from "./ErrorResponse";
 import { bodyFromData } from "./request";
 import { RequestContext } from "./RequestContext";
 import { Response } from "./Response";
-import { TimeoutError } from "./TimeoutError";
-
 /** @hidden */
 export class RequestHandler {
   public constructor(
@@ -21,86 +16,6 @@ export class RequestHandler {
     private connectionPolicy: ConnectionPolicy,
     private requestAgent: Agent
   ) {}
-  public static async createRequestObjectStub(
-    connectionPolicy: ConnectionPolicy,
-    requestOptions: RequestOptions,
-    body?: any,
-    userSignal?: AbortSignal
-  ) {
-    const controller = new AbortController();
-    const signal = controller.signal;
-
-    // Wrap users passed abort events and call our own internal abort()
-    if (userSignal) {
-      userSignal.onabort = () => {
-        controller.abort();
-      };
-    }
-
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, connectionPolicy.requestTimeout);
-
-    let response: any;
-
-    try {
-      // TODO Remove any
-      response = await fetch((requestOptions as any).href + requestOptions.path, {
-        method: requestOptions.method,
-        headers: requestOptions.headers as any,
-        agent: requestOptions.agent,
-        signal,
-        ...(body && { body })
-      } as any); // TODO Remove any. Upstream issue https://github.com/lquixada/cross-fetch/issues/42
-    } catch (error) {
-      if (error.name === "AbortError") {
-        // If the user passed signal caused the abort, cancel the timeout and rethrow the error
-        if (userSignal && userSignal.aborted === true) {
-          clearTimeout(timeout);
-          throw error;
-        }
-        throw new TimeoutError();
-      }
-      throw error;
-    }
-
-    clearTimeout(timeout);
-
-    const result = response.status === 204 || response.status === 304 ? null : await response.json();
-
-    const headers = {} as any;
-    response.headers.forEach((value: string, key: string) => {
-      headers[key] = value;
-    });
-
-    if (response.status >= 400) {
-      const errorResponse: ErrorResponse = {
-        code: response.status,
-        // TODO Upstream code expects this as a string.
-        // So after parsing to JSON we convert it back to string if there is an error
-        body: JSON.stringify(result),
-        headers
-      };
-      if (Constants.HttpHeaders.ActivityId in headers) {
-        errorResponse.activityId = headers[Constants.HttpHeaders.ActivityId];
-      }
-
-      if (Constants.HttpHeaders.SubStatus in headers) {
-        errorResponse.substatus = parseInt(headers[Constants.HttpHeaders.SubStatus], 10);
-      }
-
-      if (Constants.HttpHeaders.RetryAfterInMilliseconds in headers) {
-        errorResponse.retryAfterInMilliseconds = parseInt(headers[Constants.HttpHeaders.RetryAfterInMilliseconds], 10);
-      }
-
-      return Promise.reject(errorResponse);
-    }
-    return Promise.resolve({
-      headers,
-      result,
-      statusCode: response.status
-    });
-  }
 
   /**
    *  Creates the request object, call the passed callback when the response is retrieved.
@@ -123,7 +38,8 @@ export class RequestHandler {
     hostname: string,
     request: RequestContext,
     data: string | Buffer,
-    headers: CosmosHeaders
+    headers: CosmosHeaders,
+    abortSignal: AbortSignal
   ): Promise<Response<any>> {
     // TODO: any
     const path = (request as { path: string }).path === undefined ? request : (request as { path: string }).path;
@@ -155,15 +71,15 @@ export class RequestHandler {
     return RetryUtility.execute({
       globalEndpointManager,
       body,
-      createRequestObjectFunc: this.createRequestObjectStub,
       connectionPolicy,
       requestOptions,
-      request
+      request,
+      abortSignal
     });
   }
 
   /** @ignore */
-  public get(urlString: string, request: RequestContext, headers: CosmosHeaders) {
+  public get(urlString: string, request: RequestContext, headers: CosmosHeaders, abortSignal: AbortSignal) {
     // TODO: any
     return RequestHandler.request(
       this.globalEndpointManager,
@@ -173,12 +89,13 @@ export class RequestHandler {
       urlString,
       request,
       undefined,
-      headers
+      headers,
+      abortSignal
     );
   }
 
   /** @ignore */
-  public post(urlString: string, request: RequestContext, body: any, headers: CosmosHeaders) {
+  public post(urlString: string, request: RequestContext, body: any, headers: CosmosHeaders, abortSignal: AbortSignal) {
     // TODO: any
     return RequestHandler.request(
       this.globalEndpointManager,
@@ -188,12 +105,13 @@ export class RequestHandler {
       urlString,
       request,
       body,
-      headers
+      headers,
+      abortSignal
     );
   }
 
   /** @ignore */
-  public put(urlString: string, request: RequestContext, body: any, headers: CosmosHeaders) {
+  public put(urlString: string, request: RequestContext, body: any, headers: CosmosHeaders, abortSignal: AbortSignal) {
     // TODO: any
     return RequestHandler.request(
       this.globalEndpointManager,
@@ -203,12 +121,13 @@ export class RequestHandler {
       urlString,
       request,
       body,
-      headers
+      headers,
+      abortSignal
     );
   }
 
   /** @ignore */
-  public delete(urlString: string, request: RequestContext, headers: CosmosHeaders) {
+  public delete(urlString: string, request: RequestContext, headers: CosmosHeaders, abortSignal: AbortSignal) {
     return RequestHandler.request(
       this.globalEndpointManager,
       this.connectionPolicy,
@@ -217,7 +136,8 @@ export class RequestHandler {
       urlString,
       request,
       undefined,
-      headers
+      headers,
+      abortSignal
     );
   }
 }

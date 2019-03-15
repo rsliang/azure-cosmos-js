@@ -1,7 +1,13 @@
+import { AbortController } from "abort-controller";
+import fetch from "cross-fetch";
+import { RequestOptions as NodeRequestOptions } from "https"; // TYPES ONLY
 import { AuthOptions, setAuthorizationHeader } from "../auth";
 import { Constants, HTTPMethod, jsonStringifyAndEscapeNonASCII, ResourceType } from "../common";
+import { ConnectionPolicy } from "../documents";
 import { CosmosHeaders } from "../queryExecutionContext";
+import { ErrorResponse } from "./ErrorResponse";
 import { FeedOptions, MediaOptions, RequestOptions } from "./index";
+import { TimeoutError } from "./TimeoutError";
 
 // ----------------------------------------------------------------------------
 // Utility methods
@@ -171,4 +177,88 @@ export async function getHeaders(
     await setAuthorizationHeader(authOptions, verb, path, resourceId, resourceType, headers);
   }
   return headers;
+}
+
+export async function request(
+  connectionPolicy: ConnectionPolicy,
+  requestOptions: NodeRequestOptions,
+  body?: any,
+  userSignal?: AbortSignal
+) {
+  const controller = new AbortController();
+  const signal = controller.signal;
+  // Wrap users passed abort events and call our own internal abort()
+  if (userSignal) {
+    if (userSignal.aborted) {
+      controller.abort();
+    } else {
+      userSignal.addEventListener("abort", () => {
+        controller.abort();
+      });
+    }
+  }
+
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, connectionPolicy.requestTimeout);
+
+  let response: any;
+
+  try {
+    // TODO Remove any
+    response = await fetch((requestOptions as any).href + requestOptions.path, {
+      method: requestOptions.method,
+      headers: requestOptions.headers as any,
+      agent: requestOptions.agent,
+      signal,
+      ...(body && { body })
+    } as any); // TODO Remove any. Upstream issue https://github.com/lquixada/cross-fetch/issues/42
+  } catch (error) {
+    if (error.name === "AbortError") {
+      // If the user passed signal caused the abort, cancel the timeout and rethrow the error
+      if (userSignal && userSignal.aborted === true) {
+        clearTimeout(timeout);
+        throw error;
+      }
+      throw new TimeoutError();
+    }
+    throw error;
+  }
+
+  clearTimeout(timeout);
+
+  const result = response.status === 204 || response.status === 304 ? null : await response.json();
+
+  const headers = {} as any;
+  response.headers.forEach((value: string, key: string) => {
+    headers[key] = value;
+  });
+
+  if (response.status >= 400) {
+    const errorResponse: ErrorResponse = {
+      code: response.status,
+      // TODO Upstream code expects this as a string.
+      // So after parsing to JSON we convert it back to string if there is an error
+      body: JSON.stringify(result),
+      headers
+    };
+    if (Constants.HttpHeaders.ActivityId in headers) {
+      errorResponse.activityId = headers[Constants.HttpHeaders.ActivityId];
+    }
+
+    if (Constants.HttpHeaders.SubStatus in headers) {
+      errorResponse.substatus = parseInt(headers[Constants.HttpHeaders.SubStatus], 10);
+    }
+
+    if (Constants.HttpHeaders.RetryAfterInMilliseconds in headers) {
+      errorResponse.retryAfterInMilliseconds = parseInt(headers[Constants.HttpHeaders.RetryAfterInMilliseconds], 10);
+    }
+
+    return Promise.reject(errorResponse);
+  }
+  return Promise.resolve({
+    headers,
+    result,
+    statusCode: response.status
+  });
 }
