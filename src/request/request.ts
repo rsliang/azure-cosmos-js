@@ -6,7 +6,7 @@ import { Constants, HTTPMethod, jsonStringifyAndEscapeNonASCII, ResourceType } f
 import { ConnectionPolicy } from "../documents";
 import { CosmosHeaders } from "../queryExecutionContext";
 import { ErrorResponse } from "./ErrorResponse";
-import { FeedOptions, MediaOptions, RequestOptions } from "./index";
+import { FeedOptions, RequestOptions } from "./index";
 import { TimeoutError } from "./TimeoutError";
 
 // ----------------------------------------------------------------------------
@@ -37,12 +37,12 @@ export async function getHeaders(
   path: string,
   resourceId: string,
   resourceType: ResourceType,
-  options: RequestOptions | FeedOptions | MediaOptions,
+  options: RequestOptions | FeedOptions,
   partitionKeyRangeId?: string,
   useMultipleWriteLocations?: boolean
 ): Promise<CosmosHeaders> {
   const headers: CosmosHeaders = { ...defaultHeaders };
-  const opts: RequestOptions & FeedOptions & MediaOptions = (options || {}) as any; // TODO: this is dirty
+  const opts: RequestOptions & FeedOptions = (options || {}) as any; // TODO: this is dirty
 
   if (useMultipleWriteLocations) {
     headers[Constants.HttpHeaders.ALLOW_MULTIPLE_WRITES] = true;

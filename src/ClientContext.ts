@@ -116,14 +116,9 @@ export class ClientContext {
       );
       this.applySessionToken(path, reqHeaders);
 
-      const { result, headers: resHeaders } = await this.requestHandler.get(
-        endpoint,
-        request,
-        reqHeaders,
-        options.abortSignal
-      );
-      this.captureSessionToken(undefined, path, OperationType.Query, resHeaders);
-      return this.processQueryFeedResponse({ result, headers: resHeaders }, !!query, resultFn);
+      const response = await this.requestHandler.get(endpoint, request, reqHeaders, options.abortSignal);
+      this.captureSessionToken(undefined, path, OperationType.Query, response.headers);
+      return this.processQueryFeedResponse(response, !!query, resultFn);
     } else {
       initialHeaders[Constants.HttpHeaders.IsQuery] = "true";
       switch (this.cosmosClientOptions.queryCompatibilityMode) {
@@ -154,9 +149,8 @@ export class ClientContext {
       this.applySessionToken(path, reqHeaders);
 
       const response = await this.requestHandler.post(endpoint, request, query, reqHeaders, options.abortSignal);
-      const { result, headers: resHeaders } = response;
-      this.captureSessionToken(undefined, path, OperationType.Query, resHeaders);
-      return this.processQueryFeedResponse({ result, headers: resHeaders }, !!query, resultFn);
+      this.captureSessionToken(undefined, path, OperationType.Query, response.headers);
+      return this.processQueryFeedResponse(response, !!query, resultFn);
     }
   }
 
@@ -219,7 +213,7 @@ export class ClientContext {
     type: ResourceType,
     id: string,
     initialHeaders: CosmosHeaders,
-    options: RequestOptions = {}
+    options: RequestOptions
   ): Promise<Response<T & Resource>>;
 
   // But a few cases, like permissions, there is additional junk added to the response that isn't in system resource props
@@ -229,7 +223,7 @@ export class ClientContext {
     type: ResourceType,
     id: string,
     initialHeaders: CosmosHeaders,
-    options: RequestOptions = {}
+    options: RequestOptions
   ): Promise<Response<T & U & Resource>>;
   public async create<T, U>(
     body: T,
@@ -278,10 +272,10 @@ export class ClientContext {
     resultFn: (result: { [key: string]: any }) => any[]
   ): Response<any> {
     if (isQuery) {
-      return { result: resultFn(res.result), headers: res.headers };
+      return { result: resultFn(res.result), headers: res.headers, statusCode: res.statusCode };
     } else {
       const newResult = resultFn(res.result).map((body: any) => body);
-      return { result: newResult, headers: res.headers };
+      return { result: newResult, headers: res.headers, statusCode: res.statusCode };
     }
   }
 
@@ -356,7 +350,7 @@ export class ClientContext {
     type: ResourceType,
     id: string,
     initialHeaders: CosmosHeaders,
-    options: RequestOptions = {}
+    options: RequestOptions
   ): Promise<Response<T & Resource>>;
   public async upsert<T, U>(
     body: T,
@@ -364,7 +358,7 @@ export class ClientContext {
     type: ResourceType,
     id: string,
     initialHeaders: CosmosHeaders,
-    options: RequestOptions = {}
+    options: RequestOptions
   ): Promise<Response<T & U & Resource>>;
   public async upsert<T>(
     body: T,

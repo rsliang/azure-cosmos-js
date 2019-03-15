@@ -87,11 +87,11 @@ export async function execute({
   requestOptions = modifyRequestOptions(requestOptions, url.parse(locationEndpoint));
   requestContext.locationRouting.routeToLocation(locationEndpoint);
   try {
-    const { result, headers } = await (httpsRequest as Promise<Response<any>>);
-    headers[Constants.ThrottleRetryCount] = retryPolicies.resourceThrottleRetryPolicy.currentRetryAttemptCount;
-    headers[Constants.ThrottleRetryWaitTimeInMs] =
+    const response = await (httpsRequest as Promise<Response<any>>);
+    response.headers[Constants.ThrottleRetryCount] = retryPolicies.resourceThrottleRetryPolicy.currentRetryAttemptCount;
+    response.headers[Constants.ThrottleRetryWaitTimeInMs] =
       retryPolicies.resourceThrottleRetryPolicy.cummulativeWaitTimeinMilliseconds;
-    return { result, headers };
+    return response;
   } catch (err) {
     // TODO: any error
     let retryPolicy: RetryPolicy = null;
@@ -105,7 +105,7 @@ export async function execute({
     } else {
       retryPolicy = retryPolicies.defaultRetryPolicy;
     }
-    const results = await retryPolicy.shouldRetry(err, retryContext);
+    const results = await retryPolicy.shouldRetry(err, retryContext, locationEndpoint);
     if (!results) {
       headers[Constants.ThrottleRetryCount] = retryPolicies.resourceThrottleRetryPolicy.currentRetryAttemptCount;
       headers[Constants.ThrottleRetryWaitTimeInMs] =
@@ -115,6 +115,9 @@ export async function execute({
     } else {
       requestContext.retryCount++;
       const newUrl = (results as any)[1]; // TODO: any hack
+      if (newUrl !== undefined) {
+        modifyRequestOptions(requestOptions, url.parse(newUrl));
+      }
       await sleep(retryPolicy.retryAfterInMilliseconds);
       return execute({
         body,
