@@ -44,7 +44,6 @@ describe("NodeJS CRUD Tests", function() {
         const signal = controller.signal;
         controller.abort();
         await client.getDatabaseAccount({ abortSignal: signal });
-        // await sleep(1000);
         assert.fail("Must throw when trying to connect to database");
       } catch (err) {
         assert.equal(err.name, "AbortError", "client should throw exception");

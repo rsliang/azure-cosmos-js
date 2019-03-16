@@ -187,6 +187,11 @@ export async function request(
 ) {
   const controller = new AbortController();
   const signal = controller.signal;
+
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, connectionPolicy.requestTimeout);
+
   // Wrap users passed abort events and call our own internal abort()
   if (userSignal) {
     if (userSignal.aborted) {
@@ -197,10 +202,6 @@ export async function request(
       });
     }
   }
-
-  const timeout = setTimeout(() => {
-    controller.abort();
-  }, connectionPolicy.requestTimeout);
 
   let response: any;
 
